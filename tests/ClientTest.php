@@ -12,21 +12,78 @@
 namespace RCH\MailHog\Tests;
 
 use RCH\MailHog\Client;
+use RCH\MailHog\Message;
+use GuzzleHttp\Client as HttpClient;
+use GuzzleHttp\Psr7\Response;
 
 class ClientTest extends \PHPUnit_Framework_TestCase
 {
     public function testFindAll()
     {
-        $this->assertInstanceOf(\Generator::class, (new Client('http://ems.dryva.dev'))->findAll());
+        $httpClient = $this->getHttpClient();
+        $response = new Response(200, [], json_encode($this->getResponseBodyStub()));
+        $httpClient->get('messages', [])->willReturn($response);
+
+        $client = new Client('http://localhost');
+        $client->setHttpClient($httpClient->reveal());
+
+        $res = $client->findAll();
+
+        $this->assertInstanceOf(\Generator::class, $res);
+        $this->assertInstanceOf(Message::class, $res->current());
     }
 
     public function testFindBy()
     {
-        $this->assertInstanceOf(\Generator::class, (new Client('http://ems.dryva.dev'))->findBy('containing', 'dummy'));
+        $httpClient = $this->getHttpClient();
+        $response = new Response(200, [], json_encode($this->getResponseBodyStub()));
+        $httpClient
+            ->get('search', ['query' => ['kind' => 'containing', 'query' => 'dummy_subject', 'limit' => 100]])
+            ->willReturn($response);
+
+        $client = new Client('http://localhost');
+        $client->setHttpClient($httpClient->reveal());
+
+        $res = $client->findBy('containing', 'dummy_subject');
+
+        $this->assertInstanceOf(\Generator::class, $res);
+        $this->assertInstanceOf(Message::class, $res->current());
     }
 
     public function testFindOneBy()
     {
-        $this->assertNull((new Client('http://ems.dryva.dev'))->findOneBy('containing', 'dummy'));
+        $httpClient = $this->getHttpClient();
+        $response = new Response(200, [], json_encode($this->getResponseBodyStub()));
+        $httpClient->get('search', ['query' => ['kind' => 'containing', 'query' => 'dummy_subject', 'limit' => 1]])->willReturn($response);
+
+        $client = new Client('http://localhost');
+        $client->setHttpClient($httpClient->reveal());
+
+        $res = $client->findOneBy('containing', 'dummy_subject');
+
+        $this->assertInstanceOf(Message::class, $res);
+    }
+
+    private function getHttpClient()
+    {
+        return $this->prophesize(HttpClient::class);
+    }
+
+    private function getResponseBodyStub()
+    {
+        $rawMessage = new \stdClass();
+        $rawMessage->ID = 'dummy_id';
+        $rawMessage->Content = new \stdClass();
+        $rawMessage->Content->Body = 'dummy_body';
+        $rawMessage->Content->Headers = new \stdClass();
+        $rawMessage->Content->Headers->To = 'dummy_to';
+        $rawMessage->Content->Headers->From = 'dummy_from';
+        $rawMessage->Content->Headers->Subject = 'dummy_subject';
+        $rawMessage->MIME = null;
+
+        $body = new \stdClass();
+        $body->items = [$rawMessage];
+
+        return $body;
     }
 }

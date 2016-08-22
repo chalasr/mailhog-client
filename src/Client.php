@@ -43,15 +43,22 @@ class Client
         return $this->doQuery(null, 'messages');
     }
 
-    public function findOneLike(string $keyword)
+    /**
+     * Find one message containing a given keyword in its body/subject.
+     *
+     * @param string $search
+     *
+     * @return Message|null
+     */
+    public function findOneLike(string $search)
     {
-        return $this->findOneBy('containing', $keyword);
+        return $this->findOneBy('containing', $search);
     }
 
     /**
      * Find one message sent from a given address.
      *
-     * @param array $query
+     * @param string $from
      *
      * @return Message|null
      */
@@ -63,7 +70,7 @@ class Client
     /**
      * Find one message sent to a given address.
      *
-     * @param array $query
+     * @param string $to
      *
      * @return Message|null
      */
@@ -73,7 +80,10 @@ class Client
     }
 
     /**
-     * @param string $to
+     * Find all messages sent to a given address.
+     *
+     * @param string   $to
+     * @param int|null $limit
      *
      * @return Message[]
      */
@@ -83,7 +93,10 @@ class Client
     }
 
     /**
-     * @param string $from
+     * Find all messages sent to a given address.
+     *
+     * @param string   $from
+     * @param int|null $limit
      *
      * @return Message[]
      */
@@ -95,35 +108,48 @@ class Client
     /**
      * Find all messages for a given criteria.
      *
-     * @param array $query
+     * @param string   $criteria
+     * @param string   $value
+     * @param int|null $limit
      *
      * @return \Generator
      */
-    public function findBy(string $criteria, $value, int $limit = null)
+    public function findBy(string $criteria, string $search, int $limit = null)
     {
-        return $this->doQuery(['kind' => $criteria, 'query' => $value, 'limit' => $limit ?? 100]);
+        return $this->doQuery(['kind' => $criteria, 'query' => $search, 'limit' => $limit ?? 100]);
     }
 
     /**
      * Find one message for given criteria.
      *
-     * @param array $query
+     * @param string $criteria
+     * @param string $search
      *
      * @return Message|null
      */
-    public function findOneBy(string $criteria, $value)
+    public function findOneBy(string $criteria, string $search)
     {
-        return $this->findBy($criteria, $value, 1)->current();
+        return $this->findBy($criteria, $search, 1)->current();
     }
 
     /**
-     * Get last message sent.
+     * Get the last message sent.
      *
-     * @return Message
+     * @return Message|null
      */
     public function getLast()
     {
-        return $this->findAll();
+        $messages = iterator_to_array($this->findAll());
+
+        return end($messages);
+    }
+
+    /**
+     * @param HttpClient $client
+     */
+    public function setHttpClient(HttpClient $client)
+    {
+        $this->client = $client;
     }
 
     /**
