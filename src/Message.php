@@ -1,0 +1,189 @@
+<?php
+
+/*
+ * This file is part of the RCH\MailHog package.
+ *
+ * (c) Robin Chalas <robin.chalas@gmail.com>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
+namespace RCH\MailHog;
+
+use Symfony\Component\HttpFoundation\HeaderBag;
+
+/**
+ * Immutable object representation of a MailHog message.
+ */
+class Message
+{
+    private $id;
+    private $body;
+    private $headers;
+    private $parts;
+
+    /**
+     * @param string|int $id
+     * @param string     $body
+     * @param array      $headers
+     * @param array      $parts
+     */
+    public function __construct($id, $body, array $headers = [], array $parts = [])
+    {
+        $this->id = $id;
+        $this->body = $body;
+        $this->headers = new HeaderBag($headers);
+        $this->parts = $parts;
+    }
+
+    /**
+     * Creates a new Message from a raw one.
+     *
+     * @param stdClass $raw The raw message
+     *
+     * @return Message
+     */
+    public static function createFromRaw(\stdClass $raw) : self
+    {
+        return new self(
+            $raw->ID,
+            $raw->Content->Body,
+            (array) $raw->Content->Headers,
+            $raw->MIME ? $raw->MIME->Parts : []
+        );
+    }
+
+    /**
+     * @return string
+     */
+    public function getId()
+    {
+        return $this->id;
+    }
+
+    /**
+     * @return string
+     */
+    public function getBody()
+    {
+        return $this->body;
+    }
+
+    /**
+     * @return string
+     */
+    public function getFrom()
+    {
+        return $this->headers->get('from');
+    }
+
+    /**
+     * @return string
+     */
+    public function getTo()
+    {
+        return $this->headers->get('to');
+    }
+
+    /**
+     * @return string
+     */
+    public function getSubject()
+    {
+        return $this->headers->get('subject');
+    }
+
+    /**
+     * @return string|null
+     */
+    public function getReplyTo()
+    {
+        return $this->headers->get('Reply-To');
+    }
+
+    /**
+     * @return string\null
+     */
+    public function getReturnPath()
+    {
+        return $this->headers->get('Return-Path');
+    }
+
+    /**
+     * Parses and returns the message HTML part.
+     *
+     * @return string|null
+     */
+    public function getHtmlPart()
+    {
+        $htmlPart = null;
+
+        if (!$parts = $this->parts) {
+            return;
+        }
+
+        if (!empty($parts[2]->Headers->{'Content-Type'})) {
+            $htmlPart = $this->parseMimePart($parts[1]);
+        }
+
+        if (!$htmlPart) {
+            foreach ($parts as $part) {
+                if (!empty($part->Headers->{'Content-Type'})) {
+                    if ($htmlPart = $this->parseMimePart($part)) {
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (!$htmlPart) {
+            return;
+        }
+
+        return $htmlPart->Body;
+    }
+
+    /**
+     * Parses and returns the message TXT part.
+     *
+     * @return string|null
+     */
+    public function getTextPart()
+    {
+        $txtPart = null;
+
+        if (!$parts = $this->parts) {
+            return;
+        }
+
+        if (!empty($parts[1]->Headers->{'Content-Type'})) {
+            $txtPart = $this->parseMimePart($parts[1]);
+        }
+
+        if (!$txtPart) {
+            foreach ($parts as $part) {
+                if (!empty($part->Headers->{'Content-Type'})) {
+                    if ($txtPart = $this->parseMimePart($part)) {
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (!$txtPart) {
+            return;
+        }
+
+        return $txtPart->Body;
+    }
+
+    private function parseMimePart($part, $expectedType)
+    {
+        foreach ($part->Headers->{'Content-Type'} as $line) {
+            if (false !== strpos($line, $expectedType)) {
+                return $part;
+            }
+        }
+    }
+}
