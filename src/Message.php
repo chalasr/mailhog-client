@@ -111,38 +111,53 @@ class Message
     }
 
     /**
+     * @return HeaderBag
+     */
+    public function getHeaders()
+    {
+        return $this->headers;
+    }
+
+    /**
      * Parses and returns the message HTML part.
      *
      * @return string|null
      */
     public function getHtmlPart()
     {
-        $htmlPart = null;
+        $parts = $this->parts;
 
-        if (!$parts = $this->parts) {
-            return;
+        if (!empty($parts[1]->Headers->{'Content-Type'})) {
+            foreach ($parts[1]->Headers->{'Content-Type'} as $header_line) {
+                if (false !== strpos($header_line, 'txt')) {
+                    $part = $parts[2];
+
+                    break;
+                }
+            }
         }
 
-        if (!empty($parts[2]->Headers->{'Content-Type'})) {
-            $htmlPart = $this->parseMimePart($parts[1]);
-        }
+        if (!$part) {
+            foreach($parts as $_part) {
+                if (!empty($_part->Headers->{'Content-Type'})) {
+                    foreach ($_part->Headers->{'Content-Type'} as $header_line) {
+                        if (false !== strpos($header_line, 'txt')) {
+                            $part = $_part;
 
-        if (!$htmlPart) {
-            foreach ($parts as $part) {
-                if (!empty($part->Headers->{'Content-Type'})) {
-                    if ($htmlPart = $this->parseMimePart($part)) {
-                        break;
+                            break;
+                        }
                     }
                 }
             }
         }
 
-        if (!$htmlPart) {
+        if (!$part) {
             return;
         }
 
-        return $htmlPart->Body;
+        return $part->Body;
     }
+
 
     /**
      * Parses and returns the message TXT part.
@@ -151,39 +166,35 @@ class Message
      */
     public function getTextPart()
     {
-        $txtPart = null;
+        $parts = $this->parts;
 
-        if (!$parts = $this->parts) {
-            return;
+        if (!empty($parts[2]->Headers->{'Content-Type'})) {
+            foreach ($parts[2]->Headers->{'Content-Type'} as $header_line) {
+                if (false !== strpos($header_line, 'html')) {
+                    $part = $parts[2];
+                    break;
+                }
+            }
         }
 
-        if (!empty($parts[1]->Headers->{'Content-Type'})) {
-            $txtPart = $this->parseMimePart($parts[1]);
-        }
+        if (!$part) {
+            foreach($parts as $_part) {
+                if (!empty($_part->Headers->{'Content-Type'})) {
+                    foreach ($_part->Headers->{'Content-Type'} as $header_line) {
+                        if (false !== strpos($header_line, 'html')) {
+                            $part = $_part;
 
-        if (!$txtPart) {
-            foreach ($parts as $part) {
-                if (!empty($part->Headers->{'Content-Type'})) {
-                    if ($txtPart = $this->parseMimePart($part)) {
-                        break;
+                            break;
+                        }
                     }
                 }
             }
         }
 
-        if (!$txtPart) {
+        if (!$part) {
             return;
         }
 
-        return $txtPart->Body;
-    }
-
-    private function parseMimePart($part, $expectedType)
-    {
-        foreach ($part->Headers->{'Content-Type'} as $line) {
-            if (false !== strpos($line, $expectedType)) {
-                return $part;
-            }
-        }
+        return $part->Body;
     }
 }
