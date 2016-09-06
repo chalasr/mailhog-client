@@ -30,7 +30,7 @@ class Client
      */
     public function __construct($baseUri, $port = self::PORT)
     {
-        $this->client = new HttpClient(['base_uri' => sprintf('%s:%s/api/v2/', $baseUri, $port)]);
+        $this->client = new HttpClient(['base_uri' => sprintf('%s:%s/api/', $baseUri, $port)]);
     }
 
     /**
@@ -40,7 +40,7 @@ class Client
      */
     public function findAll()
     {
-        return $this->doQuery(null, 'messages');
+        return $this->doQuery(null, 'v2/messages');
     }
 
     /**
@@ -153,6 +153,14 @@ class Client
     }
 
     /**
+     * Delete all messages.
+     */
+    public function deleteAll()
+    {
+        $this->client->delete('v1/messages');
+    }
+
+    /**
      * Performs a given query.
      *
      * @param array|null  $query
@@ -160,7 +168,7 @@ class Client
      *
      * @return Message[]
      */
-    private function doQuery(array $query = null, string $endpoint = 'search')
+    private function doQuery(array $query = null, string $endpoint = 'v2/search')
     {
         return $this->getMessagesFromResponse(
             $this->client->get($endpoint, null === $query ? [] : ['query' => $query])
