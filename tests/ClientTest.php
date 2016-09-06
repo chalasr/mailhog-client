@@ -22,7 +22,7 @@ class ClientTest extends \PHPUnit_Framework_TestCase
     {
         $httpClient = $this->getHttpClient();
         $response = new Response(200, [], json_encode($this->getResponseBodyStub()));
-        $httpClient->get('messages', [])->willReturn($response);
+        $httpClient->get('v2/messages', [])->willReturn($response);
 
         $client = new Client('http://localhost');
         $client->setHttpClient($httpClient->reveal());
@@ -38,7 +38,7 @@ class ClientTest extends \PHPUnit_Framework_TestCase
         $httpClient = $this->getHttpClient();
         $response = new Response(200, [], json_encode($this->getResponseBodyStub()));
         $httpClient
-            ->get('search', ['query' => ['kind' => 'containing', 'query' => 'dummy_subject', 'limit' => 100]])
+            ->get('v2/search', ['query' => ['kind' => 'containing', 'query' => 'dummy_subject', 'limit' => 100]])
             ->willReturn($response);
 
         $client = new Client('http://localhost');
@@ -54,7 +54,7 @@ class ClientTest extends \PHPUnit_Framework_TestCase
     {
         $httpClient = $this->getHttpClient();
         $response = new Response(200, [], json_encode($this->getResponseBodyStub()));
-        $httpClient->get('search', ['query' => ['kind' => 'containing', 'query' => 'dummy_subject', 'limit' => 1]])->willReturn($response);
+        $httpClient->get('v2/search', ['query' => ['kind' => 'containing', 'query' => 'dummy_subject', 'limit' => 1]])->willReturn($response);
 
         $client = new Client('http://localhost');
         $client->setHttpClient($httpClient->reveal());
@@ -62,6 +62,18 @@ class ClientTest extends \PHPUnit_Framework_TestCase
         $res = $client->findOneBy('containing', 'dummy_subject');
 
         $this->assertInstanceOf(Message::class, $res);
+    }
+
+    public function testDeleteAll()
+    {
+        $httpClient = $this->getHttpClient();
+        $response = new Response(200, []);
+        $httpClient->delete('v1/messages')->willReturn($response);
+
+        $client = new Client('http://localhost');
+        $client->setHttpClient($httpClient->reveal());
+
+        $this->assertNull($client->deleteAll());
     }
 
     private function getHttpClient()
